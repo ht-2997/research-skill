@@ -1,0 +1,41 @@
+# ============ External Screening Model ============
+model:
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key: "nvapi-xxxx"
+  model_name: "nvidia/gpt-oss-120b"
+
+# ============ Paper Sources ============
+sources:
+  arxiv:
+    enabled: true
+  semantic_scholar:
+    enabled: true
+    api_key: ""
+  google_scholar:
+    enabled: false
+    serpapi_key: ""
+  dblp:
+    enabled: true           # DBLP 计算机科学文献，免费无需 key
+  crossref:
+    enabled: true           # CrossRef 全学科文献，免费
+    polite_pool: true       # 使用 Polite Pool 提高速率限制
+    mailto: ""              # 填写邮箱可加入 Polite Pool
+  core:
+    enabled: false          # CORE 开放获取论文，需要 API key
+    api_key: ""             # 从 https://core.ac.uk/services/api 获取
+
+# ============ Screening Dimensions ============
+dimensions:
+  - name: "relevance"
+    description: "与搜索策略的相关程度"
+  - name: "novelty"
+    description: "方法或视角的新颖性"
+  - name: "reproducibility"
+    description: "实验可复现的难易程度"
+
+# ============ Search Parameters ============
+search:
+  max_results_per_source: 30
+  date_range_years: 3
+  concurrent_requests: 5
+  dedup_threshold: 0.85
