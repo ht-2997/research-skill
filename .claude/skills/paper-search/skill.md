@@ -2,6 +2,18 @@
 
 Execute paper search based on a strategy, screen results with AI, and generate reports.
 
+## When to Use
+
+- User has a `search_strategy_*.json` file ready
+- User has already defined keywords, exclusions, and search parameters
+- User wants to execute search, screening, and generate report
+
+## When NOT to Use
+
+- User doesn't have a strategy file yet → use `/paper-strategy` first
+- User is still unsure about research direction → use `/paper-strategy` first
+- User wants to search non-academic content → this skill is for academic papers only
+
 ## Prerequisites
 
 - Python 3.10+

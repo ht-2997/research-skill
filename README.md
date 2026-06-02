@@ -24,6 +24,32 @@ claude
 /paper-search      # Execute search + screening + report
 ```
 
+## Skills Usage Guide
+
+### `/paper-strategy` — Generate Search Strategy
+
+**When to use:**
+- You have a research idea but haven't formed search keywords yet
+- You don't know what to search or how to search
+- You need to refine your research direction through dialogue
+
+**When NOT to use:**
+- You already have a `search_strategy_*.json` file → use `/paper-search` directly
+- You know exactly what keywords to search → skip to `/paper-search`
+- You want to search for non-academic content (blog posts, news, etc.) → this skill is for academic papers only
+
+### `/paper-search` — Execute Search & Screening
+
+**When to use:**
+- You have a `search_strategy_*.json` file ready
+- You have already defined keywords, exclusions, and search parameters
+- You want to execute search, screening, and generate report
+
+**When NOT to use:**
+- You don't have a strategy file yet → use `/paper-strategy` first
+- You are still unsure about research direction → use `/paper-strategy` first
+- You want to search non-academic content → this skill is for academic papers only
+
 ## Features
 
 - **Dialogue-based strategy:** Refine research ideas through conversation

@@ -2,6 +2,18 @@
 
 Help users refine their research ideas into structured search strategies through dialogue.
 
+## When to Use
+
+- User has a research idea but hasn't formed search keywords yet
+- User doesn't know what to search or how to search
+- User needs to refine their research direction through dialogue
+
+## When NOT to Use
+
+- User already has a `search_strategy_*.json` file → use `/paper-search` directly
+- User knows exactly what keywords to search → skip to `/paper-search`
+- User wants to search for non-academic content (blog posts, news, etc.) → this skill is for academic papers only
+
 ## Process
 
 1. **Understand the idea:** Ask the user what they want to research
