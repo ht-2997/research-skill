@@ -86,7 +86,7 @@ Edit `config.yaml`:
 model:
   base_url: "https://openrouter.ai/api/v1"
   api_key: ""  # Or set OPENROUTER_API_KEY environment variable
-  model_name: "openai/gpt-4o"  # Change to your preferred model
+  model_name: "openai/gpt-oss-120b:free"  # Free model on OpenRouter
 
 # Paper sources
 sources:
@@ -166,7 +166,7 @@ $env:CORE_API_KEY="your-core-key"
 
 Screening model must support OpenAI-compatible API format:
 
-- **NVIDIA NIM:** `https://integrate.api.nvidia.com/v1`
+- **OpenRouter (default):** `https://openrouter.ai/api/v1` — Free models available (e.g. `openai/gpt-oss-120b:free`)
 - **Local Ollama:** `http://localhost:11434/v1`
 - **OpenAI:** `https://api.openai.com/v1`
 - **Other:** Any service implementing `/v1/chat/completions`
@@ -193,33 +193,12 @@ research-skill/
 │       ├── papers_raw.json
 │       ├── papers_screened.json
 │       └── report.md
-├── tests/                 # Unit tests
-├── test_apis.py           # API connectivity test
-├── list_models.py         # List available NVIDIA models
 ├── config.yaml            # Your configuration
 ├── config.example.yaml    # Configuration template
 └── requirements.txt       # Python dependencies
 ```
 
 ## Development
-
-### Test API Connectivity
-
-```bash
-python test_apis.py
-```
-
-### List Available Models
-
-```bash
-python list_models.py
-```
-
-### Run Tests
-
-```bash
-pytest tests/ -v
-```
 
 ### Manual Testing
 

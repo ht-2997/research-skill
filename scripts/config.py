@@ -87,9 +87,12 @@ def load_config(config_path: str) -> Config:
     if 'model' in data:
         config.model = ModelConfig(**data['model'])
 
-    # 如果配置文件中 api_key 为空，尝试从环境变量读取
+    # 如果配置文件中 api_key 为空，根据 base_url 从对应环境变量读取
     if not config.model.api_key:
-        config.model.api_key = os.getenv("OPENROUTER_API_KEY", "")
+        if "nvidia" in config.model.base_url:
+            config.model.api_key = os.getenv("NVIDIA_API_KEY", "")
+        else:
+            config.model.api_key = os.getenv("OPENROUTER_API_KEY", "")
     if 'sources' in data:
         sources = data['sources']
         config.sources = SourcesConfig(

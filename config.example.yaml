@@ -2,7 +2,7 @@
 model:
   base_url: "https://openrouter.ai/api/v1"
   api_key: ""  # Or set OPENROUTER_API_KEY environment variable
-  model_name: "openai/gpt-4o"  # Change to your preferred model
+  model_name: "openai/gpt-oss-120b:free"  # Free model on OpenRouter
 
 # ============ Paper Sources ============
 sources:
