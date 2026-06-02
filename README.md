@@ -2,6 +2,28 @@
 
 Claude Code skills for academic paper search with AI-powered screening. Supports multiple data sources including ArXiv, DBLP, CrossRef, CORE, and Semantic Scholar.
 
+## Usage Mode
+
+This is a **project-level skill**. You need to run Claude Code from this project directory to use the skills.
+
+```bash
+# Clone the repository
+git clone https://github.com/ht-2997/research-skill.git
+cd research-skill
+
+# Install dependencies and configure
+pip install -r requirements.txt
+cp config.example.yaml config.yaml
+# Edit config.yaml with your API keys
+
+# Start Claude Code from this directory
+claude
+
+# Then use the skills
+/paper-strategy    # Generate search strategy through dialogue
+/paper-search      # Execute search + screening + report
+```
+
 ## Features
 
 - **Dialogue-based strategy:** Refine research ideas through conversation
@@ -76,23 +98,9 @@ search:
   dedup_threshold: 0.85
 ```
 
-### 4. Install Skills
+### 4. Usage
 
-Copy the skills to your Claude Code skills directory:
-
-```bash
-# Option A: Install to project directory
-mkdir -p /path/to/your/project/.claude/skills
-cp -r .claude/skills/* /path/to/your/project/.claude/skills/
-
-# Option B: Install to user directory (global)
-mkdir -p ~/.claude/skills
-cp -r .claude/skills/* ~/.claude/skills/
-```
-
-### 5. Usage
-
-In Claude Code:
+In Claude Code (run from this project directory):
 
 ```
 /paper-strategy    # Dialogue to generate search strategy
