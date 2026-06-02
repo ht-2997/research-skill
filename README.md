@@ -84,9 +84,9 @@ Edit `config.yaml`:
 ```yaml
 # External screening model (OpenAI-compatible API)
 model:
-  base_url: "https://integrate.api.nvidia.com/v1"
-  api_key: ""  # Or set NVIDIA_API_KEY environment variable
-  model_name: "openai/gpt-oss-120b"
+  base_url: "https://openrouter.ai/api/v1"
+  api_key: ""  # Or set OPENROUTER_API_KEY environment variable
+  model_name: "openai/gpt-4o"  # Change to your preferred model
 
 # Paper sources
 sources:
@@ -150,15 +150,15 @@ API keys can be set via environment variables:
 
 ```bash
 # Linux/Mac
-export NVIDIA_API_KEY="nvapi-xxxx"
+export OPENROUTER_API_KEY="sk-or-xxxx"
 export CORE_API_KEY="your-core-key"
 
 # Windows CMD
-set NVIDIA_API_KEY=nvapi-xxxx
+set OPENROUTER_API_KEY=sk-or-xxxx
 set CORE_API_KEY=your-core-key
 
 # PowerShell
-$env:NVIDIA_API_KEY="nvapi-xxxx"
+$env:OPENROUTER_API_KEY="sk-or-xxxx"
 $env:CORE_API_KEY="your-core-key"
 ```
 

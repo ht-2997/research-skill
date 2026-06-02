@@ -59,19 +59,19 @@ output/
 
 ## Data Sources
 
-| Source | API Key Required | Notes |
-|--------|-----------------|-------|
-| ArXiv | No | Free public API |
-| DBLP | No | Computer Science |
-| CrossRef | No | All disciplines |
-| CORE | Yes | Open Access papers |
-| Semantic Scholar | Optional | Higher rate with key |
+| Source | Free | Notes |
+|--------|------|-------|
+| ArXiv | ✅ | Free public API |
+| DBLP | ✅ | Computer Science |
+| CrossRef | ✅ | All disciplines |
+| CORE | ✅ | Open Access papers, free API key |
+| Semantic Scholar | ✅ | Free without key, higher rate with key |
 
 ## Environment Variables
 
 ```bash
-export NVIDIA_API_KEY="nvapi-xxxx"    # For screening model
-export CORE_API_KEY="your-core-key"   # For CORE search
+export OPENROUTER_API_KEY="sk-or-xxxx"  # For screening model
+export CORE_API_KEY="your-core-key"      # For CORE search
 ```
 
 ## User Interaction Points

@@ -6,9 +6,9 @@ import yaml
 
 @dataclass
 class ModelConfig:
-    base_url: str = "https://integrate.api.nvidia.com/v1"
+    base_url: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
-    model_name: str = "meta/llama-3.1-8b-instruct"
+    model_name: str = "openai/gpt-4o"
 
 
 @dataclass
@@ -89,7 +89,7 @@ def load_config(config_path: str) -> Config:
 
     # 如果配置文件中 api_key 为空，尝试从环境变量读取
     if not config.model.api_key:
-        config.model.api_key = os.getenv("NVIDIA_API_KEY", "")
+        config.model.api_key = os.getenv("OPENROUTER_API_KEY", "")
     if 'sources' in data:
         sources = data['sources']
         config.sources = SourcesConfig(
