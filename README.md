@@ -135,14 +135,14 @@ In Claude Code (run from this project directory):
 
 ## Data Sources
 
-| Source | API Key Required | Coverage | Notes |
-|--------|-----------------|----------|-------|
-| ArXiv | ❌ | CS, Physics, Math | Free public API |
-| DBLP | ❌ | Computer Science | Free, no registration |
-| CrossRef | ❌ | All disciplines | Free, email recommended for rate limits |
-| CORE | ✅ | All disciplines (Open Access) | Free API key at core.ac.uk |
-| Semantic Scholar | Optional | All disciplines | Free without key, higher rate with key |
-| Google Scholar | ✅ SerpAPI | All disciplines | Requires paid proxy |
+| Source | Free | Coverage | Notes |
+|--------|------|----------|-------|
+| ArXiv | ✅ | CS, Physics, Math | Free public API |
+| DBLP | ✅ | Computer Science | Free, no registration |
+| CrossRef | ✅ | All disciplines | Free, email recommended for rate limits |
+| CORE | ✅ | All disciplines (Open Access | Free API key at core.ac.uk |
+| Semantic Scholar | ✅ | All disciplines | Free without key, higher rate with key |
+| Google Scholar | ❌ | All disciplines | Requires paid SerpAPI proxy |
 
 ## Environment Variables
 
