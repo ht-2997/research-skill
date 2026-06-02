@@ -20,13 +20,13 @@ cp config.example.yaml config.yaml
 claude
 
 # Then use the skills
-/paper-strategy    # Generate search strategy through dialogue
+/paper-research    # Generate search strategy through dialogue
 /paper-search      # Execute search + screening + report
 ```
 
 ## Skills Usage Guide
 
-### `/paper-strategy` — Generate Search Strategy
+### `/paper-research` — Generate Search Strategy
 
 **When to use:**
 - You have a research idea but haven't formed search keywords yet
@@ -46,8 +46,8 @@ claude
 - You want to execute search, screening, and generate report
 
 **When NOT to use:**
-- You don't have a strategy file yet → use `/paper-strategy` first
-- You are still unsure about research direction → use `/paper-strategy` first
+- You don't have a strategy file yet → use `/paper-research` first
+- You are still unsure about research direction → use `/paper-research` first
 - You want to search non-academic content → this skill is for academic papers only
 
 ## Features
@@ -129,7 +129,7 @@ search:
 In Claude Code (run from this project directory):
 
 ```
-/paper-strategy    # Dialogue to generate search strategy
+/paper-research    # Dialogue to generate search strategy
 /paper-search      # Execute search + screening + report
 ```
 
@@ -177,7 +177,7 @@ Screening model must support OpenAI-compatible API format:
 research-skill/
 ├── .claude/
 │   └── skills/
-│       ├── paper-strategy/    # Strategy generation skill
+│       ├── paper-research/    # Strategy generation skill
 │       │   └── skill.md
 │       └── paper-search/      # Search orchestration skill
 │           └── skill.md

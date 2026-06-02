@@ -1,4 +1,4 @@
-# Paper Strategy Skill
+# Paper Research Skill
 
 Help users refine their research ideas into structured search strategies through **multi-turn dialogue**.
 
