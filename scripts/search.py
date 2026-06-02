@@ -22,20 +22,24 @@ class Paper:
 class ArxivSearcher:
     BASE_URL = "https://export.arxiv.org/api/query"  # 使用 HTTPS
 
-    def _build_query(self, strategy: dict) -> str:
-        """Build ArXiv search query from strategy."""
+    def _build_queries(self, strategy: dict, chunk_size: int = 5) -> List[str]:
+        """Build ArXiv search queries, split into chunks to avoid rate limiting."""
         keywords = strategy.get("keywords", [])
         exclude = strategy.get("exclude", [])
 
-        # Build OR query for keywords
-        keyword_query = " OR ".join([f'all:"{kw}"' for kw in keywords])
+        # Split keywords into chunks
+        chunks = [keywords[i:i + chunk_size] for i in range(0, len(keywords), chunk_size)]
+        queries = []
 
-        # Build exclude query
-        if exclude:
-            exclude_query = " AND ".join([f'NOT all:"{ex}"' for ex in exclude])
-            return f"({keyword_query}) AND {exclude_query}"
+        for chunk in chunks:
+            keyword_query = " OR ".join([f'all:"{kw}"' for kw in chunk])
+            if exclude:
+                exclude_query = " AND ".join([f'NOT all:"{ex}"' for ex in exclude])
+                queries.append(f"({keyword_query}) AND {exclude_query}")
+            else:
+                queries.append(keyword_query)
 
-        return keyword_query
+        return queries
 
     def _parse_response(self, xml_text: str) -> List[Paper]:
         """Parse ArXiv XML response to Paper list."""
@@ -81,24 +85,40 @@ class ArxivSearcher:
         return papers
 
     async def search(self, strategy: dict, max_results: int = 30) -> List[Paper]:
-        """Search ArXiv for papers."""
-        query = self._build_query(strategy)
-        params = {
-            "search_query": query,
-            "start": 0,
-            "max_results": max_results,
-            "sortBy": "relevance",
-            "sortOrder": "descending"
-        }
+        """Search ArXiv for papers with split queries to avoid rate limiting."""
+        queries = self._build_queries(strategy)
+        all_papers = []
+        seen_ids = set()
 
-        try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
-                response = await client.get(self.BASE_URL, params=params, timeout=60.0)
-                response.raise_for_status()
-            return self._parse_response(response.text)
-        except Exception as e:
-            print(f"ArXiv search failed: {e}")
-            return []
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            for i, query in enumerate(queries):
+                per_query = max(max_results // len(queries), 10)
+                params = {
+                    "search_query": query,
+                    "start": 0,
+                    "max_results": per_query,
+                    "sortBy": "relevance",
+                    "sortOrder": "descending"
+                }
+
+                try:
+                    response = await client.get(self.BASE_URL, params=params, timeout=60.0)
+                    response.raise_for_status()
+                    papers = self._parse_response(response.text)
+                    # Deduplicate
+                    for p in papers:
+                        if p.id not in seen_ids:
+                            seen_ids.add(p.id)
+                            all_papers.append(p)
+                    print(f"  ArXiv query {i+1}/{len(queries)}: found {len(papers)} papers")
+                except Exception as e:
+                    print(f"  ArXiv query {i+1}/{len(queries)} failed: {e}")
+
+                # Delay between queries to avoid rate limiting
+                if i < len(queries) - 1:
+                    await asyncio.sleep(3)
+
+        return all_papers[:max_results]
 
 
 class SemanticScholarSearcher:

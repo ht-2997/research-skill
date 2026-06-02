@@ -134,51 +134,51 @@ def build_score_prompt(paper: dict, strategy: dict, dimensions: List) -> List[Di
 
 
 async def score_papers(papers: List[dict], classify_results: List[ScreenResult], strategy: dict, config) -> List[ScreenResult]:
-    """Score papers that passed classification."""
+    """Score papers that passed classification with concurrency."""
     # Filter to only relevant and possibly_relevant papers
     relevant_ids = {r.paper_id for r in classify_results if r.label in ["relevant", "possibly_relevant"]}
     papers_to_score = [p for p in papers if p["id"] in relevant_ids]
 
-    results = []
-    for paper in papers_to_score:
-        messages = build_score_prompt(paper, strategy, config.dimensions)
+    sem = asyncio.Semaphore(5)
 
-        try:
-            response = await call_llm(
-                config.model.base_url,
-                config.model.api_key,
-                config.model.model_name,
-                messages
-            )
+    async def score_one(paper):
+        async with sem:
+            messages = build_score_prompt(paper, strategy, config.dimensions)
+            try:
+                response = await call_llm(
+                    config.model.base_url,
+                    config.model.api_key,
+                    config.model.model_name,
+                    messages
+                )
 
-            content = response["choices"][0]["message"]["content"]
-            # Parse JSON from response
-            # Handle cases where LLM might include markdown code blocks
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
+                content = response["choices"][0]["message"]["content"]
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0]
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0]
 
-            score_data = json.loads(content.strip())
+                score_data = json.loads(content.strip())
 
-            results.append(ScreenResult(
-                paper_id=paper["id"],
-                label=next((r.label for r in classify_results if r.paper_id == paper["id"]), ""),
-                reasoning=next((r.reasoning for r in classify_results if r.paper_id == paper["id"]), ""),
-                scores=score_data.get("scores", {}),
-                overall=score_data.get("overall", 0.0),
-                summary=score_data.get("summary", "")
-            ))
-        except Exception as e:
-            # If scoring fails, still include paper with default scores
-            results.append(ScreenResult(
-                paper_id=paper["id"],
-                label=next((r.label for r in classify_results if r.paper_id == paper["id"]), ""),
-                reasoning=f"Scoring failed: {str(e)}",
-                scores={d.name: 5 for d in config.dimensions},
-                overall=5.0,
-                summary="Scoring failed"
-            ))
+                return ScreenResult(
+                    paper_id=paper["id"],
+                    label=next((r.label for r in classify_results if r.paper_id == paper["id"]), ""),
+                    reasoning=next((r.reasoning for r in classify_results if r.paper_id == paper["id"]), ""),
+                    scores=score_data.get("scores", {}),
+                    overall=score_data.get("overall", 0.0),
+                    summary=score_data.get("summary", "")
+                )
+            except Exception as e:
+                return ScreenResult(
+                    paper_id=paper["id"],
+                    label=next((r.label for r in classify_results if r.paper_id == paper["id"]), ""),
+                    reasoning=f"Scoring failed: {str(e)}",
+                    scores={d.name: 5 for d in config.dimensions},
+                    overall=5.0,
+                    summary="Scoring failed"
+                )
+
+    results = await asyncio.gather(*[score_one(p) for p in papers_to_score])
 
     # Sort by overall score descending
     results.sort(key=lambda x: x.overall, reverse=True)
@@ -212,22 +212,24 @@ async def main():
     from scripts.config import load_config
     config = load_config(args.config)
 
-    # Classify papers
-    classify_results = []
-    for i, paper in enumerate(papers):
-        try:
-            result = await classify_paper(paper, strategy, config)
-            classify_results.append(result)
-            print(f"[{i+1}/{len(papers)}] Classified: {paper['title'][:50]}... -> {result.label}")
-        except Exception as e:
-            print(f"[{i+1}/{len(papers)}] Failed: {paper['title'][:50]}... Error: {e}")
-            classify_results.append(ScreenResult(
-                paper_id=paper.get("id", ""),
-                label="irrelevant",
-                reasoning=f"Classification failed: {str(e)}"
-            ))
-        # 添加延迟避免速率限制
-        await asyncio.sleep(0.5)
+    # Classify papers with concurrency
+    sem = asyncio.Semaphore(5)  # Limit to 5 concurrent requests
+
+    async def classify_with_limit(i, paper):
+        async with sem:
+            try:
+                result = await classify_paper(paper, strategy, config)
+                print(f"[{i+1}/{len(papers)}] Classified: {paper['title'][:50]}... -> {result.label}")
+                return result
+            except Exception as e:
+                print(f"[{i+1}/{len(papers)}] Failed: {paper['title'][:50]}... Error: {e}")
+                return ScreenResult(
+                    paper_id=paper.get("id", ""),
+                    label="irrelevant",
+                    reasoning=f"Classification failed: {str(e)}"
+                )
+
+    classify_results = await asyncio.gather(*[classify_with_limit(i, p) for i, p in enumerate(papers)])
 
     # Score papers
     score_results = await score_papers(papers, classify_results, strategy, config)
