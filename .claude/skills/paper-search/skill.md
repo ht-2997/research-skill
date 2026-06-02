@@ -4,14 +4,14 @@ Execute paper search based on a strategy, screen results with AI, and generate r
 
 ## When to Use
 
-- User has a `search_strategy_*.json` file ready
+- User has a strategy file ready (in `output/<topic>_<date>/strategy.json`)
 - User has already defined keywords, exclusions, and search parameters
 - User wants to execute search, screening, and generate report
 
 ## When NOT to Use
 
-- User doesn't have a strategy file yet → use `/paper-strategy` first
-- User is still unsure about research direction → use `/paper-strategy` first
+- User doesn't have a strategy file yet → use `/paper-research` first
+- User is still unsure about research direction → use `/paper-research` first
 - User wants to search non-academic content → this skill is for academic papers only
 
 ## Prerequisites
@@ -23,27 +23,38 @@ Execute paper search based on a strategy, screen results with AI, and generate r
 
 ## Process
 
-1. **Load strategy:** Read from file or accept inline
+1. **Load strategy:** Read from `output/<topic>_<date>/strategy.json`
 2. **Confirm with user:** Show strategy summary and get approval
 3. **Search:** Run `scripts/search.py` to find papers
 4. **Screen:** Run `scripts/screen.py` to classify and score papers
 5. **Report:** Run `scripts/report.py` to generate terminal + Markdown output
-6. **Export (optional):** Run `scripts/export.py` if user wants to save
+6. **Final output:** All files saved to the same `output/<topic>_<date>/` folder
 
 ## Commands
 
 ```bash
+# Set output directory (replace with your actual folder name)
+OUTPUT_DIR="output/<topic-name>_<YYYYMMDD>"
+
 # Search papers
-python scripts/search.py --strategy <strategy.json> --config config.yaml --output papers_raw.json
+python scripts/search.py --strategy $OUTPUT_DIR/strategy.json --config config.yaml --output $OUTPUT_DIR/papers_raw.json
 
 # Screen papers
-python scripts/screen.py --papers papers_raw.json --strategy <strategy.json> --config config.yaml --output papers_screened.json
+python scripts/screen.py --papers $OUTPUT_DIR/papers_raw.json --strategy $OUTPUT_DIR/strategy.json --config config.yaml --output $OUTPUT_DIR/papers_screened.json
 
 # Generate report
-python scripts/report.py --papers papers_screened.json --strategy <strategy.json> --output report.md --total-found <N>
+python scripts/report.py --papers $OUTPUT_DIR/papers_screened.json --strategy $OUTPUT_DIR/strategy.json --output $OUTPUT_DIR/report.md --total-found <N>
+```
 
-# Export results
-python scripts/export.py --papers papers_screened.json --output search_YYYYMMDD.json
+## Output Folder Structure
+
+```
+output/
+└── <topic-name>_<YYYYMMDD>/
+    ├── strategy.json          # Search strategy
+    ├── papers_raw.json        # Raw search results
+    ├── papers_screened.json   # AI-screened results
+    └── report.md              # Final report
 ```
 
 ## Data Sources
@@ -68,7 +79,7 @@ export CORE_API_KEY="your-core-key"   # For CORE search
 - **Before search:** Confirm strategy
 - **After search:** Show raw count
 - **After screening:** Show filtered count and top papers
-- **After report:** Ask if user wants to export or adjust
+- **After report:** Ask if user wants to adjust
 
 ## Example Usage
 
@@ -77,22 +88,22 @@ User: "Search for papers using my strategy file"
 Assistant: "I'll search for papers based on your strategy.
 
 **Strategy summary:**
-- Topic: Model compression
-- Keywords: model compression, knowledge distillation, pruning
-- Exclude: survey
+- Topic: VLM SAM bbox correction
+- Keywords: VLM, SAM, bbox, prompt refinement
+- Exclude: point prompt
 - Max results: 50
 
 Starting search..."
 
-[Run search.py]
+[Run search.py → output/vlm-sam-bbox-correction_20260602/papers_raw.json]
 
 "Found 45 papers. Now screening with AI..."
 
-[Run screen.py]
+[Run screen.py → output/vlm-sam-bbox-correction_20260602/papers_screened.json]
 
 "Screened to 12 relevant papers. Generating report..."
 
-[Run report.py]
+[Run report.py → output/vlm-sam-bbox-correction_20260602/report.md]
 
 "📊 Results:
 #  Title                                    Source      Score   Date
@@ -100,9 +111,8 @@ Starting search..."
 2  Pruning Strategies for LLMs              sem.sch     8.7    2024-03
 ...
 
-Report saved to `report.md`.
+All files saved to `output/vlm-sam-bbox-correction_20260602/`.
 
 Would you like to:
-1. Export results to JSON
-2. Adjust screening dimensions
-3. Search with different keywords?"
+1. Adjust screening dimensions
+2. Search with different keywords?"

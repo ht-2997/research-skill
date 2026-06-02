@@ -34,14 +34,14 @@ claude
 - You need to refine your research direction through dialogue
 
 **When NOT to use:**
-- You already have a `search_strategy_*.json` file → use `/paper-search` directly
+- You already have a strategy file → use `/paper-search` directly
 - You know exactly what keywords to search → skip to `/paper-search`
 - You want to search for non-academic content (blog posts, news, etc.) → this skill is for academic papers only
 
 ### `/paper-search` — Execute Search & Screening
 
 **When to use:**
-- You have a `search_strategy_*.json` file ready
+- You have a strategy file ready (in `output/<topic>_<date>/strategy.json`)
 - You have already defined keywords, exclusions, and search parameters
 - You want to execute search, screening, and generate report
 
@@ -187,6 +187,12 @@ research-skill/
 │   ├── screen.py          # AI screening (classification + scoring)
 │   ├── report.py          # Report generation (terminal + markdown)
 │   └── export.py          # Export/import JSON
+├── output/                # Output files (auto-generated)
+│   └── <topic>_<date>/    # One folder per research topic
+│       ├── strategy.json
+│       ├── papers_raw.json
+│       ├── papers_screened.json
+│       └── report.md
 ├── tests/                 # Unit tests
 ├── test_apis.py           # API connectivity test
 ├── list_models.py         # List available NVIDIA models
@@ -218,17 +224,20 @@ pytest tests/ -v
 ### Manual Testing
 
 ```bash
+# Create output folder
+mkdir -p output/test-search_20260602
+
 # Create a test strategy
-echo '{"topic": "attention", "keywords": ["attention", "transformer"], "exclude": [], "max_results": 5}' > test_strategy.json
+echo '{"topic": "attention", "keywords": ["attention", "transformer"], "exclude": [], "max_results": 5}' > output/test-search_20260602/strategy.json
 
 # Search
-python scripts/search.py --strategy test_strategy.json --config config.yaml --output papers.json
+python scripts/search.py --strategy output/test-search_20260602/strategy.json --config config.yaml --output output/test-search_20260602/papers_raw.json
 
 # Screen
-python scripts/screen.py --papers papers.json --strategy test_strategy.json --config config.yaml --output screened.json
+python scripts/screen.py --papers output/test-search_20260602/papers_raw.json --strategy output/test-search_20260602/strategy.json --config config.yaml --output output/test-search_20260602/papers_screened.json
 
 # Report
-python scripts/report.py --papers screened.json --strategy test_strategy.json --output report.md --total-found 5
+python scripts/report.py --papers output/test-search_20260602/papers_screened.json --strategy output/test-search_20260602/strategy.json --output output/test-search_20260602/report.md --total-found 5
 ```
 
 ## License

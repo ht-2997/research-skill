@@ -10,7 +10,7 @@ Help users refine their research ideas into structured search strategies through
 
 ## When NOT to Use
 
-- User already has a `search_strategy_*.json` file → use `/paper-search` directly
+- User already has a strategy file → use `/paper-search` directly
 - User knows exactly what keywords to search → skip to `/paper-search`
 - User wants to search for non-academic content (blog posts, news, etc.) → this skill is for academic papers only
 
@@ -36,13 +36,17 @@ Help users refine their research ideas into structured search strategies through
   - What to exclude
 - Ask: "Does this summary look right? Should I adjust anything?"
 
-### Step 4: Generate strategy
+### Step 4: Generate strategy and output folder
 - Only after Step 3 is confirmed
+- Create output folder: `output/<topic-name>_<YYYYMMDD>/`
+  - Topic name should be in English, lowercase, hyphenated (e.g., `vlm-sam-bbox-correction`)
+  - Date format: YYYYMMDD (e.g., `20260602`)
 - Create structured JSON search strategy
-- Save to file with timestamp
+- Save as `output/<topic-name>_<YYYYMMDD>/strategy.json`
 
 ### Step 5: Final confirmation
 - Show the generated strategy to user
+- Show the output folder path
 - Ask: "Is this strategy ready to use, or do you want to adjust?"
 
 ## Clarifying Dimensions Menu
@@ -100,28 +104,21 @@ Choose the most relevant questions based on the user's response:
 
 **User:** "Looks good."
 
-**Assistant:** "Generating strategy..."
+**Assistant:** "Generating strategy and creating output folder..."
 
-[Generate and save strategy file]
+[Create folder: `output/vlm-sam-bbox-correction_20260602/`]
+[Save strategy to: `output/vlm-sam-bbox-correction_20260602/strategy.json`]
 
-**Assistant:** "Strategy saved to `search_strategy_20260602_123456.json`. 
+**Assistant:** "Strategy saved to `output/vlm-sam-bbox-correction_20260602/strategy.json`.
 
 **Is this strategy ready to use, or do you want to adjust?**"
 
-## Output Format
+## Output Folder Structure
 
-Save as `search_strategy_YYYYMMDD_HHMMSS.json`:
-
-```json
-{
-  "topic": "...",
-  "keywords": ["...", "..."],
-  "exclude": ["...", "..."],
-  "dimensions": ["relevance", "novelty", "reproducibility"],
-  "date_range": "2023-2026",
-  "max_results": 50,
-  "reasoning": "Why these keywords were chosen..."
-}
+```
+output/
+└── <topic-name>_<YYYYMMDD>/
+    └── strategy.json
 ```
 
 ## Checklist Before Generating Strategy
@@ -129,3 +126,4 @@ Save as `search_strategy_YYYYMMDD_HHMMSS.json`:
 - [ ] Asked at least 2 clarifying questions
 - [ ] User confirmed the summary
 - [ ] User confirmed the strategy
+- [ ] Created output folder with English name
