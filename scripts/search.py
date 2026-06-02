@@ -1,9 +1,41 @@
 import re
 import json
+import sys
+import os
 from dataclasses import dataclass, field
 from typing import List, Optional
 from xml.etree import ElementTree as ET
 import httpx
+
+
+def _get_system_proxy() -> Optional[str]:
+    """Detect system proxy on Windows. Returns proxy URL or None."""
+    if sys.platform == 'win32':
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r'Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+            )
+            proxy_enable, _ = winreg.QueryValueEx(key, 'ProxyEnable')
+            if proxy_enable:
+                proxy_server, _ = winreg.QueryValueEx(key, 'ProxyServer')
+                winreg.CloseKey(key)
+                if proxy_server:
+                    # 确保有协议前缀
+                    if not proxy_server.startswith(('http://', 'https://', 'socks5://')):
+                        proxy_server = f'http://{proxy_server}'
+                    return proxy_server
+            winreg.CloseKey(key)
+        except Exception:
+            pass
+
+    # 检查环境变量
+    return os.environ.get('HTTP_PROXY') or os.environ.get('HTTPS_PROXY') or os.environ.get('http_proxy') or os.environ.get('https_proxy')
+
+
+# 全局代理配置
+SYSTEM_PROXY = _get_system_proxy()
 
 
 @dataclass
@@ -19,22 +51,82 @@ class Paper:
     pdf_url: Optional[str] = None
 
 
+def _extract_keywords(strategy: dict) -> List[str]:
+    """Extract keywords from strategy, supporting both formats:
+    - Flat format: {"keywords": ["kw1", "kw2"]}
+    - Structured format: {"search_directions": [{"queries": ["q1", "q2"]}]}
+    """
+    # 优先使用顶层 keywords（向后兼容）
+    if "keywords" in strategy and strategy["keywords"]:
+        return strategy["keywords"]
+
+    # 从 search_directions 中提取并展平 queries
+    keywords = []
+    for direction in strategy.get("search_directions", []):
+        queries = direction.get("queries", [])
+        keywords.extend(queries)
+
+    # 去重并保持顺序
+    seen = set()
+    unique = []
+    for kw in keywords:
+        if kw not in seen:
+            seen.add(kw)
+            unique.append(kw)
+
+    return unique
+
+
+def _extract_core_keywords(strategy: dict) -> List[str]:
+    """Extract concise core keywords for searchers that don't support long queries (DBLP, CrossRef, etc.).
+    From search_directions, extracts the direction names as concise search terms.
+    Falls back to _extract_keywords for flat format.
+    """
+    # 优先使用顶层 keywords（向后兼容，这些通常已经是简短关键词）
+    if "keywords" in strategy and strategy["keywords"]:
+        return strategy["keywords"]
+
+    # 从 search_directions 的 name 字段提取简洁关键词
+    names = []
+    for direction in strategy.get("search_directions", []):
+        name = direction.get("name", "")
+        if name:
+            names.append(name)
+
+    if names:
+        return names
+
+    # fallback: 使用 _extract_keywords
+    return _extract_keywords(strategy)
+
+
+def _extract_core_keywords_limited(strategy: dict, max_keywords: int = 3) -> List[str]:
+    """Extract limited core keywords for searchers with strict query length limits (e.g., DBLP)."""
+    keywords = _extract_core_keywords(strategy)
+    return keywords[:max_keywords]
+
+
+def _extract_exclude(strategy: dict) -> List[str]:
+    """Extract exclude keywords from strategy."""
+    return strategy.get("exclude", [])
+
+
 class ArxivSearcher:
     BASE_URL = "https://export.arxiv.org/api/query"  # 使用 HTTPS
 
     def _build_queries(self, strategy: dict, chunk_size: int = 5) -> List[str]:
         """Build ArXiv search queries, split into chunks to avoid rate limiting."""
-        keywords = strategy.get("keywords", [])
-        exclude = strategy.get("exclude", [])
+        keywords = _extract_keywords(strategy)
+        exclude = _extract_exclude(strategy)
 
         # Split keywords into chunks
         chunks = [keywords[i:i + chunk_size] for i in range(0, len(keywords), chunk_size)]
         queries = []
 
         for chunk in chunks:
-            keyword_query = " OR ".join([f'all:"{kw}"' for kw in chunk])
+            keyword_query = " OR ".join([f'all:{kw}' for kw in chunk])
             if exclude:
-                exclude_query = " AND ".join([f'NOT all:"{ex}"' for ex in exclude])
+                exclude_query = " AND ".join([f'NOT all:{ex}' for ex in exclude])
                 queries.append(f"({keyword_query}) AND {exclude_query}")
             else:
                 queries.append(keyword_query)
@@ -90,7 +182,7 @@ class ArxivSearcher:
         all_papers = []
         seen_ids = set()
 
-        async with httpx.AsyncClient(follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, proxy=SYSTEM_PROXY) as client:
             for i, query in enumerate(queries):
                 per_query = max(max_results // len(queries), 10)
                 params = {
@@ -126,7 +218,7 @@ class SemanticScholarSearcher:
 
     def _build_query(self, strategy: dict) -> str:
         """Build search query from strategy."""
-        keywords = strategy.get("keywords", [])
+        keywords = _extract_keywords(strategy)
         return " ".join(keywords)
 
     def _parse_response(self, data: dict) -> List[Paper]:
@@ -172,7 +264,7 @@ class SemanticScholarSearcher:
             headers["x-api-key"] = api_key
 
         try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
+            async with httpx.AsyncClient(follow_redirects=True, proxy=SYSTEM_PROXY) as client:
                 response = await client.get(self.BASE_URL, params=params, headers=headers, timeout=60.0)
                 if response.status_code == 429:
                     await asyncio.sleep(3)
@@ -189,7 +281,7 @@ class GoogleScholarSearcher:
 
     def _build_query(self, strategy: dict) -> str:
         """Build search query from strategy."""
-        keywords = strategy.get("keywords", [])
+        keywords = _extract_keywords(strategy)
         exclude = strategy.get("exclude", [])
 
         query = " ".join(keywords)
@@ -242,7 +334,7 @@ class GoogleScholarSearcher:
             "engine": "google_scholar"
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(proxy=SYSTEM_PROXY) as client:
             response = await client.get(self.BASE_URL, params=params)
             response.raise_for_status()
 
@@ -254,8 +346,8 @@ class DBLPSearcher:
     BASE_URL = "https://dblp.org/search/publ/api"
 
     def _build_query(self, strategy: dict) -> str:
-        """Build DBLP search query from strategy."""
-        keywords = strategy.get("keywords", [])
+        """Build DBLP search query from strategy. Limited to 3 keywords to avoid 500 errors."""
+        keywords = _extract_core_keywords_limited(strategy, max_keywords=3)
         return " ".join(keywords)
 
     def _parse_response(self, data: dict) -> List[Paper]:
@@ -303,7 +395,7 @@ class DBLPSearcher:
         }
 
         try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
+            async with httpx.AsyncClient(follow_redirects=True, proxy=SYSTEM_PROXY) as client:
                 response = await client.get(self.BASE_URL, params=params, timeout=60.0)
                 response.raise_for_status()
             return self._parse_response(response.json())
@@ -318,7 +410,7 @@ class CrossRefSearcher:
 
     def _build_query(self, strategy: dict) -> str:
         """Build CrossRef search query from strategy."""
-        keywords = strategy.get("keywords", [])
+        keywords = _extract_core_keywords(strategy)
         return " ".join(keywords)
 
     def _parse_response(self, data: dict) -> List[Paper]:
@@ -379,7 +471,7 @@ class CrossRefSearcher:
             headers["Mailto"] = mailto  # Enables Polite Pool for better rate limits
 
         try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
+            async with httpx.AsyncClient(follow_redirects=True, proxy=SYSTEM_PROXY) as client:
                 response = await client.get(self.BASE_URL, params=params, headers=headers, timeout=60.0)
                 response.raise_for_status()
             return self._parse_response(response.json())
@@ -394,7 +486,7 @@ class CORESearcher:
 
     def _build_query(self, strategy: dict) -> str:
         """Build CORE search query from strategy."""
-        keywords = strategy.get("keywords", [])
+        keywords = _extract_core_keywords(strategy)
         return " ".join(keywords)
 
     def _parse_response(self, data: dict) -> List[Paper]:
@@ -448,7 +540,7 @@ class CORESearcher:
         }
 
         try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
+            async with httpx.AsyncClient(follow_redirects=True, proxy=SYSTEM_PROXY) as client:
                 response = await client.get(self.BASE_URL, params=params, headers=headers, timeout=60.0)
                 response.raise_for_status()
             return self._parse_response(response.json())

@@ -1,8 +1,41 @@
 import json
 import asyncio
+import sys
+import io
+import os
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 import httpx
+
+# Fix Windows console encoding
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+
+def _get_system_proxy() -> Optional[str]:
+    """Detect system proxy on Windows. Returns proxy URL or None."""
+    if sys.platform == 'win32':
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r'Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+            )
+            proxy_enable, _ = winreg.QueryValueEx(key, 'ProxyEnable')
+            if proxy_enable:
+                proxy_server, _ = winreg.QueryValueEx(key, 'ProxyServer')
+                winreg.CloseKey(key)
+                if proxy_server:
+                    if not proxy_server.startswith(('http://', 'https://', 'socks5://')):
+                        proxy_server = f'http://{proxy_server}'
+                    return proxy_server
+            winreg.CloseKey(key)
+        except Exception:
+            pass
+    return os.environ.get('HTTP_PROXY') or os.environ.get('HTTPS_PROXY') or os.environ.get('http_proxy') or os.environ.get('https_proxy')
+
+
+SYSTEM_PROXY = _get_system_proxy()
 
 
 @dataclass
@@ -30,7 +63,7 @@ async def call_llm(base_url: str, api_key: str, model_name: str, messages: List[
 
     for attempt in range(max_retries):
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(proxy=SYSTEM_PROXY) as client:
                 response = await client.post(url, json=data, headers=headers, timeout=120.0)
                 response.raise_for_status()
                 return response.json()
@@ -219,10 +252,12 @@ async def main():
         async with sem:
             try:
                 result = await classify_paper(paper, strategy, config)
-                print(f"[{i+1}/{len(papers)}] Classified: {paper['title'][:50]}... -> {result.label}")
+                safe_title = paper['title'][:50].encode('utf-8', errors='replace').decode('utf-8')
+                print(f"[{i+1}/{len(papers)}] Classified: {safe_title}... -> {result.label}")
                 return result
             except Exception as e:
-                print(f"[{i+1}/{len(papers)}] Failed: {paper['title'][:50]}... Error: {e}")
+                safe_title = paper['title'][:50].encode('utf-8', errors='replace').decode('utf-8')
+                print(f"[{i+1}/{len(papers)}] Failed: {safe_title}... Error: {e}")
                 return ScreenResult(
                     paper_id=paper.get("id", ""),
                     label="irrelevant",
