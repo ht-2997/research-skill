@@ -1,12 +1,12 @@
-# Paper Search Skills
+# Research Skill - Paper Search & AI Screening
 
-Claude Code skills for paper search with AI screening, supporting arXiv, Semantic Scholar, and Google Scholar.
+Claude Code skills for academic paper search with AI-powered screening. Supports multiple data sources including ArXiv, DBLP, CrossRef, CORE, and Semantic Scholar.
 
 ## Features
 
 - **Dialogue-based strategy:** Refine research ideas through conversation
-- **Multi-source search:** arXiv, Semantic Scholar, Google Scholar
-- **AI screening:** Classification + scoring with configurable models
+- **Multi-source search:** ArXiv, DBLP, CrossRef, CORE, Semantic Scholar
+- **AI screening:** Classification + scoring with configurable LLM models
 - **Report generation:** Terminal table + Markdown report
 - **Export/Import:** JSON format for sharing results
 
@@ -36,29 +36,37 @@ Edit `config.yaml`:
 ```yaml
 # External screening model (OpenAI-compatible API)
 model:
-  base_url: "https://integrate.api.nvidia.com/v1"  # API endpoint
-  api_key: "nvapi-xxxx"                             # API key
-  model_name: "meta/llama-3.1-8b-instruct"          # Model name
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key: ""  # Or set NVIDIA_API_KEY environment variable
+  model_name: "openai/gpt-oss-120b"
 
 # Paper sources
 sources:
   arxiv:
     enabled: true
+  dblp:
+    enabled: true           # DBLP Computer Science Bibliography, free
+  crossref:
+    enabled: true           # CrossRef, free
+    mailto: ""              # Optional: email for Polite Pool
   semantic_scholar:
-    enabled: true
-    api_key: ""  # Optional, higher rate limit with key
+    enabled: false          # Temporarily disabled (rate limited)
+    api_key: ""
+  core:
+    enabled: false          # Requires API key
+    api_key: ""             # Or set CORE_API_KEY environment variable
   google_scholar:
     enabled: false
-    serpapi_key: ""  # Required for Google Scholar
+    serpapi_key: ""
 
 # Screening dimensions (customize as needed)
 dimensions:
   - name: "relevance"
-    description: "与搜索策略的相关程度"
+    description: "Relevance to the search strategy"
   - name: "novelty"
-    description: "方法或视角的新颖性"
+    description: "Novelty of method or perspective"
   - name: "reproducibility"
-    description: "实验可复现的难易程度"
+    description: "Ease of reproducing experiments"
 
 # Search parameters
 search:
@@ -68,7 +76,21 @@ search:
   dedup_threshold: 0.85
 ```
 
-### 4. Usage
+### 4. Install Skills
+
+Copy the skills to your Claude Code skills directory:
+
+```bash
+# Option A: Install to project directory
+mkdir -p /path/to/your/project/.claude/skills
+cp -r .claude/skills/* /path/to/your/project/.claude/skills/
+
+# Option B: Install to user directory (global)
+mkdir -p ~/.claude/skills
+cp -r .claude/skills/* ~/.claude/skills/
+```
+
+### 5. Usage
 
 In Claude Code:
 
@@ -79,11 +101,32 @@ In Claude Code:
 
 ## Data Sources
 
-| Source | API Key Required | Notes |
-|--------|-----------------|-------|
-| arXiv | ❌ | Free public API, CS/Physics/Math |
-| Semantic Scholar | Optional | Free without key, higher rate with key |
-| Google Scholar | ✅ SerpAPI | Requires paid proxy |
+| Source | API Key Required | Coverage | Notes |
+|--------|-----------------|----------|-------|
+| ArXiv | ❌ | CS, Physics, Math | Free public API |
+| DBLP | ❌ | Computer Science | Free, no registration |
+| CrossRef | ❌ | All disciplines | Free, email recommended for rate limits |
+| CORE | ✅ | All disciplines (Open Access) | Free API key at core.ac.uk |
+| Semantic Scholar | Optional | All disciplines | Free without key, higher rate with key |
+| Google Scholar | ✅ SerpAPI | All disciplines | Requires paid proxy |
+
+## Environment Variables
+
+API keys can be set via environment variables:
+
+```bash
+# Linux/Mac
+export NVIDIA_API_KEY="nvapi-xxxx"
+export CORE_API_KEY="your-core-key"
+
+# Windows CMD
+set NVIDIA_API_KEY=nvapi-xxxx
+set CORE_API_KEY=your-core-key
+
+# PowerShell
+$env:NVIDIA_API_KEY="nvapi-xxxx"
+$env:CORE_API_KEY="your-core-key"
+```
 
 ## External Model Compatibility
 
@@ -97,23 +140,40 @@ Screening model must support OpenAI-compatible API format:
 ## Project Structure
 
 ```
-paper-search/
-├── skills/
-│   ├── paper-strategy/    # Strategy generation skill
-│   └── paper-search/      # Search orchestration skill
+research-skill/
+├── .claude/
+│   └── skills/
+│       ├── paper-strategy/    # Strategy generation skill
+│       │   └── skill.md
+│       └── paper-search/      # Search orchestration skill
+│           └── skill.md
 ├── scripts/
 │   ├── config.py          # Configuration loading
-│   ├── search.py          # Paper search (arXiv, Semantic Scholar, Google Scholar)
+│   ├── search.py          # Paper search (ArXiv, DBLP, CrossRef, CORE, etc.)
 │   ├── screen.py          # AI screening (classification + scoring)
 │   ├── report.py          # Report generation (terminal + markdown)
 │   └── export.py          # Export/import JSON
 ├── tests/                 # Unit tests
+├── test_apis.py           # API connectivity test
+├── list_models.py         # List available NVIDIA models
 ├── config.yaml            # Your configuration
 ├── config.example.yaml    # Configuration template
 └── requirements.txt       # Python dependencies
 ```
 
 ## Development
+
+### Test API Connectivity
+
+```bash
+python test_apis.py
+```
+
+### List Available Models
+
+```bash
+python list_models.py
+```
 
 ### Run Tests
 
@@ -128,10 +188,10 @@ pytest tests/ -v
 echo '{"topic": "attention", "keywords": ["attention", "transformer"], "exclude": [], "max_results": 5}' > test_strategy.json
 
 # Search
-python scripts/search.py --strategy test_strategy.json --output papers.json
+python scripts/search.py --strategy test_strategy.json --config config.yaml --output papers.json
 
 # Screen
-python scripts/screen.py --papers papers.json --strategy test_strategy.json --output screened.json
+python scripts/screen.py --papers papers.json --strategy test_strategy.json --config config.yaml --output screened.json
 
 # Report
 python scripts/report.py --papers screened.json --strategy test_strategy.json --output report.md --total-found 5
